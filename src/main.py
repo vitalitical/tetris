@@ -43,12 +43,12 @@ RESOLUTIONS = [
 ]
 
 AUTHOR_LIST = {
-    "CEO": "Vitalitical",
-    "Lead Programmer": "Vitalitical",
-    "Art Director": "Vitalitical",
-    "Sound Designer": "Maxim Serebriakov",
-    "QA Tester": "Vitalitical",
-    "Special Thanks": "FOR ME MAN :>!"
+    "CEO": "Vitalik",
+    "Lead Programmer": "Vitalik",
+    "Art Director": "idk, seems no design",
+    "Sound Designer": "no sound sorry :<",
+    "QA Tester": "u will test it",
+    "Special Thanks": "FOR U MAN :>!"
 }
 
 # --- State Classes ---
