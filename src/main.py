@@ -5,31 +5,32 @@ import pygame
 
 # --- Constants & Configuration ---
 
+# Atmospheric cosmic color schemes
 THEMES = {
-    "Dark": {
-        "bg": (20, 20, 30),
-        "text": (180, 180, 200),
-        "selected": (255, 215, 0)
+    "Cosmic Aurora": {
+        "bg": (12, 10, 28),
+        "text": (180, 220, 245),
+        "selected": (0, 255, 190)
     },
-    "Light": {
-        "bg": (235, 235, 240),
-        "text": (40, 40, 40),
-        "selected": (200, 50, 50)
+    "Antimatter": {
+        "bg": (22, 6, 24),
+        "text": (235, 190, 255),
+        "selected": (255, 20, 147)
     },
-    "Matrix": {
-        "bg": (5, 15, 5),
-        "text": (0, 180, 0),
-        "selected": (150, 255, 150)
+    "Supernova": {
+        "bg": (28, 12, 8),
+        "text": (255, 215, 180),
+        "selected": (255, 120, 20)
     },
-    "Ocean": {
-        "bg": (10, 25, 45),
-        "text": (150, 200, 220),
-        "selected": (0, 255, 200)
+    "Deep Nebula": {
+        "bg": (8, 18, 38),
+        "text": (160, 210, 255),
+        "selected": (60, 160, 255)
     },
-    "Retro": {
-        "bg": (25, 10, 35),
-        "text": (0, 255, 255),
-        "selected": (255, 0, 255)
+    "Quasar Void": {
+        "bg": (8, 8, 12),
+        "text": (180, 180, 190),
+        "selected": (240, 245, 255)
     }
 }
 THEME_NAMES = list(THEMES.keys())
@@ -42,12 +43,12 @@ RESOLUTIONS = [
 ]
 
 AUTHOR_LIST = {
-    "CEO": "Виталик",
-    "Lead Programmer": "Виталик и его раб ИИ",
-    "Art Director": "чат хе пе те",
-    "Sound Designer": "никаких саундов",
-    "QA Tester": "сам тестил",
-    "Special Thanks": "э я :>!"
+    "CEO": "Vitalitical",
+    "Lead Programmer": "Vitalitical",
+    "Art Director": "Vitalitical",
+    "Sound Designer": "Maxim Serebriakov",
+    "QA Tester": "Vitalitical",
+    "Special Thanks": "FOR ME MAN :>!"
 }
 
 # --- State Classes ---
@@ -224,49 +225,6 @@ class AuthorMenu(State):
         scaled_instruction = pygame.transform.smoothscale(instruction, (int(inst_rect.w * 0.5), int(inst_rect.h * 0.5)))
         surface.blit(scaled_instruction, (10, 10))
 
-class GameOver(State):
-    """Screen displayed when the player dies (Win sequence is now handled inside GamePlay)"""
-    def __init__(self, app, score, time_survived, reason):
-        super().__init__(app)
-        self.score = int(score)
-        self.time_survived = time_survived
-        self.reason = reason
-
-    def handle_events(self, events):
-        for event in events:
-            if event.type == pygame.KEYDOWN:
-                self.app.change_state(MainMenu(self.app))
-
-    def draw(self, surface):
-        theme = THEMES[self.app.config["theme"]]
-        surface.fill(theme["bg"])
-        
-        screen_w, screen_h = surface.get_size()
-        center_x = screen_w // 2
-        center_y = screen_h // 2
-        
-        title_font = pygame.font.SysFont("Arial", 60, bold=True)
-        title_text = title_font.render("GAME OVER", True, (255, 100, 100))
-        title_rect = title_text.get_rect(center=(center_x, center_y - 80))
-        surface.blit(title_text, title_rect)
-        
-        reason_font = pygame.font.SysFont("Arial", 30)
-        reason_text = reason_font.render(self.reason, True, theme["text"])
-        reason_rect = reason_text.get_rect(center=(center_x, center_y - 20))
-        surface.blit(reason_text, reason_rect)
-        
-        score_text = self.font.render(f"Final Score: {self.score}", True, theme["selected"])
-        score_rect = score_text.get_rect(center=(center_x, center_y + 40))
-        surface.blit(score_text, score_rect)
-
-        time_text = self.font.render(f"Time: {self.time_survived:.1f}s", True, theme["selected"])
-        time_rect = time_text.get_rect(center=(center_x, center_y + 90))
-        surface.blit(time_text, time_rect)
-        
-        inst_text = reason_font.render("Press ANY KEY to return to Menu", True, theme["text"])
-        inst_rect = inst_text.get_rect(center=(center_x, center_y + 160))
-        surface.blit(inst_text, inst_rect)
-
 
 class GamePlay(State):
     def __init__(self, app):
@@ -278,14 +236,16 @@ class GamePlay(State):
         
         self.base_speed = 3.0 + (self.app.config["speed"] * 0.5)
         self.current_speed = self.base_speed
+        
+        self.g_const = 3.5
         self.g_assist = 0.0 
         self.edge_drag = 0.0
         
         self.turn_speed = 0.08         
         
         self.bh_mass = 50000.0          
-        self.event_horizon = 45.0      
-        self.safe_distance = 2000.0    # Escape boundary
+        self.event_horizon = 85.0
+        self.safe_distance = 2000.0
         
         self.camera_x = 0.0
         self.camera_y = 0.0
@@ -298,12 +258,24 @@ class GamePlay(State):
         self.photon_trail = [] 
         self.max_trail_length = 20
         
-        # --- Cinematic Escape Variables ---
+        # --- Cinematic State Variables ---
         self.escaping = False
-        self.escape_phase = 0  # 1: Accelerating, 2: Flying off screen, 3: Text fade in
+        self.escape_phase = 0
+        
+        # Staged Collapse: 
+        # 1: Slight expansion & shake
+        # 2: Sucks in all surrounding photons
+        # 3: Violent full screen engulfment
+        # 4: Abrupt Game Over screen
+        self.consumed = False
+        self.consume_phase = 0
+        self.consume_radius = self.event_horizon
+        self.consume_timer = 0
+        self.consume_speed = 3.0
+        
         self.fade_alpha = 0.0
         
-        # 1. Background stars (Twinkling)
+        # Background stars
         self.stars = []
         for _ in range(800):
             sx = random.uniform(-self.safe_distance - 400, self.safe_distance + 400)
@@ -312,22 +284,23 @@ class GamePlay(State):
             twinkle_phase = random.uniform(0.0, math.pi * 2) 
             self.stars.append([sx, sy, base_size, twinkle_phase])
 
-        # 2. Fully simulated background photons (Massive swarm)
+        # Dense swarm of photons near the black hole
         self.bg_photons = []
         for _ in range(800):
             self.bg_photons.append(self._spawn_bg_photon())
 
     def _spawn_bg_photon(self):
-        d = random.uniform(self.event_horizon + 20, self.safe_distance * 1.5)
+        cluster_factor = random.random() ** 3.2
+        d = self.event_horizon + 15 + cluster_factor * (self.safe_distance * 0.75)
         angle = random.uniform(0, math.pi * 2)
         px = math.cos(angle) * d
         py = math.sin(angle) * d
 
-        orbital_speed = math.sqrt(self.bh_mass / d)
+        orbital_speed = math.sqrt(self.bh_mass / max(d, 50.0))
 
-        if random.random() < 0.6:
-            vx = -math.sin(angle) * orbital_speed * random.uniform(0.7, 1.3)
-            vy = math.cos(angle) * orbital_speed * random.uniform(0.7, 1.3)
+        if random.random() < 0.7:
+            vx = -math.sin(angle) * orbital_speed * random.uniform(0.8, 1.2)
+            vy = math.cos(angle) * orbital_speed * random.uniform(0.8, 1.2)
         else:
             vx = random.uniform(-orbital_speed, orbital_speed)
             vy = random.uniform(-orbital_speed, orbital_speed)
@@ -340,28 +313,34 @@ class GamePlay(State):
             "vx": vx, "vy": vy,
             "trail": [(px, py)],
             "size": random.uniform(1.0, 2.0),
-            "max_trail": random.randint(3, 8) # Shorter trail for optimization
+            "max_trail": random.randint(3, 7)
         }
 
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.KEYDOWN:
-                # Allow exit immediately if game is normal, OR if victory sequence has finished fading in
-                if not self.escaping and event.key == pygame.K_ESCAPE:
+                if not self.escaping and not self.consumed and event.key == pygame.K_ESCAPE:
                     self.app.change_state(MainMenu(self.app))
-                elif self.escape_phase == 3 and self.fade_alpha > 150:
+                elif self.escaping and self.escape_phase == 3 and self.fade_alpha > 150:
+                    self.app.change_state(MainMenu(self.app))
+                # Abrupt game over screen returns to menu on any key press
+                elif self.consumed and self.consume_phase == 4:
                     self.app.change_state(MainMenu(self.app))
 
     def update(self):
         current_ticks = pygame.time.get_ticks()
-        
-        if not self.escaping: self.elapsed_time = (current_ticks - self.start_ticks) / 1000.0
+        if not self.escaping and not self.consumed:
+            self.elapsed_time = (current_ticks - self.start_ticks) / 1000.0
+
         dx = -self.player_x
         dy = -self.player_y
         dist_sq = dx**2 + dy**2
         dist = math.sqrt(dist_sq)
 
-        if not self.escaping:
+        screen_w, screen_h = self.app.screen.get_size()
+        max_screen_radius = math.hypot(screen_w, screen_h)
+
+        if not self.escaping and not self.consumed:
             # --- NORMAL GAMEPLAY PHYSICS ---
             time_velocity = self.base_speed + (self.elapsed_time * 0.15)
 
@@ -371,12 +350,15 @@ class GamePlay(State):
             if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
                 self.angle += self.turn_speed
 
-            # Death / Win Conditions
+            # Condition 1: Black hole collision (Starts Collapse Phase 1)
             if dist < self.event_horizon:
-                self.app.change_state(GameOver(self.app, self.score, self.elapsed_time, "Consumed by the Black Hole!"))
+                self.consumed = True
+                self.consume_phase = 1
+                self.consume_timer = 0
                 return
+
+            # Condition 2: Escape boundary reached (Starts Escape Sequence)
             elif dist > self.safe_distance:
-                # WIN! Start the escape sequence
                 self.escaping = True
                 self.escape_phase = 1
                 return
@@ -386,11 +368,10 @@ class GamePlay(State):
             proximity_multiplier = (distance_factor ** 2) * 0.02
             self.score += proximity_multiplier
 
+            # Directional acceleration (Constant g)
             angle_to_bh = math.atan2(dy, dx)
             alignment = math.cos(self.angle - angle_to_bh)
-            
-            gravity_pull = (self.bh_mass / max(dist, 1)) * 0.02
-            self.g_assist = gravity_pull * alignment
+            self.g_assist = self.g_const * alignment
 
             distance_ratio = dist / self.safe_distance
             self.edge_drag = (distance_ratio ** 6) * 22.0
@@ -398,7 +379,7 @@ class GamePlay(State):
             thrust = time_velocity + self.g_assist - self.edge_drag
             thrust = max(0.0, thrust)
 
-            gravity_bend_force = self.bh_mass / max(dist_sq, 1)
+            gravity_bend_force = min(4.0, self.bh_mass / max(dist_sq, 1000.0))
 
             vx = math.cos(self.angle) * thrust
             vy = math.sin(self.angle) * thrust
@@ -415,11 +396,44 @@ class GamePlay(State):
             self.player_y += vy
             
             self._update_camera()
-            
-        else:
-            # --- CINEMATIC ESCAPE SEQUENCE ---
+
+        elif self.consumed:
+            # --- STAGED BLACK HOLE COLLAPSE ---
+            # Center camera smoothly on black hole
+            self.camera_x += (0 - self.camera_x) * 0.1
+            self.camera_y += (0 - self.camera_y) * 0.1
+
+            # Player photon is absorbed
+            self.player_x *= 0.8
+            self.player_y *= 0.8
+
+            if self.consume_phase == 1:
+                # Stage 1: Slight swell and initial rumbling
+                self.consume_radius += 0.9
+                if self.consume_radius >= 135.0:
+                    self.consume_phase = 2
+                    self.consume_timer = 0
+
+            elif self.consume_phase == 2:
+                # Stage 2: Sucks in surrounding photons with extreme gravity
+                self.consume_timer += 1
+                self.consume_radius += 0.4
+                if self.consume_timer >= 55:
+                    self.consume_phase = 3
+                    self.consume_speed = 5.0
+
+            elif self.consume_phase == 3:
+                # Stage 3: Violent, exponential expansion engulfing the entire screen
+                self.consume_speed += 3.2
+                self.consume_radius += self.consume_speed
+                
+                # When black hole engulfs the view, cut immediately to abrupt Game Over
+                if self.consume_radius >= max_screen_radius:
+                    self.consume_phase = 4
+
+        elif self.escaping:
+            # --- ESCAPE SEQUENCE ---
             if self.escape_phase == 1:
-                # Accelerate smoothly up to speed 15
                 if self.current_speed < 15.0:
                     self.current_speed += 0.1
                 else:
@@ -427,17 +441,13 @@ class GamePlay(State):
                     
                 self.player_x += math.cos(self.angle) * self.current_speed
                 self.player_y += math.sin(self.angle) * self.current_speed
-                
-                self._update_camera() # Keep camera on player while accelerating
+                self._update_camera()
                 
             elif self.escape_phase == 2:
-                # Speed gets crazy, camera freezes, photon flies out of screen
                 self.current_speed += 0.5
                 self.player_x += math.cos(self.angle) * self.current_speed
                 self.player_y += math.sin(self.angle) * self.current_speed
                 
-                # Check if photon is completely off-screen
-                screen_w, screen_h = self.app.screen.get_size()
                 px_screen = self.player_x - self.camera_x + (screen_w // 2)
                 py_screen = self.player_y - self.camera_y + (screen_h // 2)
                 
@@ -445,21 +455,28 @@ class GamePlay(State):
                     self.escape_phase = 3
                     
             elif self.escape_phase == 3:
-                # Fade in the victory text
                 self.fade_alpha = min(255.0, self.fade_alpha + 1.5)
 
-        # --- Update Background Photons Physics (Always running) ---
+        # --- Background Photons Physics ---
+        active_event_horizon = self.consume_radius if self.consumed else self.event_horizon
         for p in self.bg_photons:
             p_dist_sq = p["x"]**2 + p["y"]**2
             p_dist = math.sqrt(p_dist_sq)
 
-            if p_dist < self.event_horizon or p_dist > self.safe_distance * 1.5:
-                p.update(self._spawn_bg_photon())
+            if p_dist < active_event_horizon or p_dist > self.safe_distance * 1.5:
+                if not self.consumed:
+                    p.update(self._spawn_bg_photon())
                 continue
 
-            force = self.bh_mass / max(p_dist_sq, 1)
-            p["vx"] -= (p["x"] / p_dist) * force
-            p["vy"] -= (p["y"] / p_dist) * force
+            # In Phase 2, nearby photons get sucked straight inward at high speed
+            if self.consumed and self.consume_phase >= 2:
+                inward_pull = 28.0
+                p["vx"] -= (p["x"] / max(p_dist, 1.0)) * inward_pull
+                p["vy"] -= (p["y"] / max(p_dist, 1.0)) * inward_pull
+            else:
+                force = self.bh_mass / max(p_dist_sq, 1)
+                p["vx"] -= (p["x"] / p_dist) * force
+                p["vy"] -= (p["y"] / p_dist) * force
 
             p["x"] += p["vx"]
             p["y"] += p["vy"]
@@ -468,13 +485,12 @@ class GamePlay(State):
             if len(p["trail"]) > p["max_trail"]:
                 p["trail"].pop(0)
 
-        # Update dynamic trail (unless photon flew away)
-        if self.escape_phase < 3:
+        # Trail updates
+        if not self.consumed and self.escape_phase < 3:
             self.max_trail_length = int(15 + self.current_speed * 1.5)
             self.photon_trail.append((self.player_x, self.player_y))
             if len(self.photon_trail) > self.max_trail_length:
                 self.photon_trail.pop(0)
-
 
     def _update_camera(self):
         cam_dist_x = self.player_x - self.camera_x
@@ -505,9 +521,25 @@ class GamePlay(State):
         center_y = screen_h // 2
         current_time = pygame.time.get_ticks()
 
-        # Camera Shake Logic (Active at high speeds or during the fly-off phase)
+        # Dynamic Camera Shake Logic
         shake_x, shake_y = 0, 0
-        if (not self.escaping and self.current_speed > 16.0) or (self.escaping and self.escape_phase == 2):
+        if self.consumed:
+            if self.consume_phase == 1:
+                intensity = 7.0
+                shake_x = random.uniform(-intensity, intensity)
+                shake_y = random.uniform(-intensity, intensity)
+            elif self.consume_phase == 2:
+                intensity = 15.0
+                shake_x = random.uniform(-intensity, intensity)
+                shake_y = random.uniform(-intensity, intensity)
+            elif self.consume_phase == 3:
+                intensity = 30.0
+                shake_x = random.uniform(-intensity, intensity)
+                shake_y = random.uniform(-intensity, intensity)
+            elif self.consume_phase == 4:
+                # Total stillness once screen is swallowed
+                shake_x, shake_y = 0, 0
+        elif (not self.escaping and self.current_speed > 16.0) or (self.escaping and self.escape_phase == 2):
             intensity = 12.0 if self.escape_phase == 2 else (self.current_speed - 16.0) * 0.4
             shake_x = random.uniform(-intensity, intensity)
             shake_y = random.uniform(-intensity, intensity)
@@ -524,7 +556,7 @@ class GamePlay(State):
             if 0 <= screen_x <= screen_w and 0 <= screen_y <= screen_h:
                 twinkle_size = max(0, base_size + math.sin((current_time / 300.0) + phase))
                 if twinkle_size > 0:
-                    stretch_factor = self.current_speed * 1.2
+                    stretch_factor = self.current_speed * 1.2 if not self.consumed else 1.0
                     tail_x = screen_x - math.cos(self.angle) * stretch_factor
                     tail_y = screen_y - math.sin(self.angle) * stretch_factor
                     
@@ -534,8 +566,8 @@ class GamePlay(State):
                     
                     pygame.draw.line(surface, star_color, (int(screen_x), int(screen_y)), (int(tail_x), int(tail_y)), int(twinkle_size))
 
-        # 2. Draw Simulated Background Photons
-        bg_photon_color = self._get_intermediate_color(theme["bg"], theme["text"], 0.25) # Faint glow
+        # 2. Draw Background Photons
+        bg_photon_color = self._get_intermediate_color(theme["bg"], theme["text"], 0.25)
         for p in self.bg_photons:
             if len(p["trail"]) > 1:
                 screen_trail = []
@@ -543,7 +575,6 @@ class GamePlay(State):
                     sx = tx - self.camera_x + view_cx
                     sy = ty - self.camera_y + view_cy
                     screen_trail.append((int(sx), int(sy)))
-                
                 pygame.draw.lines(surface, bg_photon_color, False, screen_trail, 1)
             
             px_s = p["x"] - self.camera_x + view_cx
@@ -555,29 +586,30 @@ class GamePlay(State):
         bh_pos = (int(bh_screen_x), int(bh_screen_y))
 
         # 3. Cinematic Black Hole Rendering
-        pulse_amount = math.sin(current_time / 400.0) * 10.0
-        glow_radius = int(self.event_horizon * 3.5 + pulse_amount)
+        current_event_horizon = self.consume_radius if self.consumed else self.event_horizon
+        pulse_amount = math.sin(current_time / 400.0) * 12.0 if not self.consumed else 0.0
+        glow_radius = int(current_event_horizon * 2.8 + pulse_amount)
         
         if -glow_radius < bh_pos[0] < screen_w + glow_radius and -glow_radius < bh_pos[1] < screen_h + glow_radius:
             glow_surf = pygame.Surface((glow_radius * 2, glow_radius * 2), pygame.SRCALPHA)
             bh_center = (glow_radius, glow_radius)
             base_color = theme["selected"]
 
-            layers = 15
+            layers = 16
             for i in range(layers):
                 factor = i / layers
-                radius = int(self.event_horizon + (glow_radius - self.event_horizon) * (1.0 - factor))
-                alpha = int(120 * (factor ** 2)) 
+                radius = int(current_event_horizon + (glow_radius - current_event_horizon) * (1.0 - factor))
+                alpha = int(120 * (factor ** 2))
                 pygame.draw.circle(glow_surf, (base_color[0], base_color[1], base_color[2], alpha), bh_center, radius)
 
-            pygame.draw.circle(glow_surf, (255, 255, 255, 180), bh_center, int(self.event_horizon + 2), 2)
-            pygame.draw.circle(glow_surf, (255, 255, 255, 80), bh_center, int(self.event_horizon + 6), 4)
-            pygame.draw.circle(glow_surf, (0, 0, 0, 255), bh_center, int(self.event_horizon))
+            pygame.draw.circle(glow_surf, (255, 255, 255, 200), bh_center, int(current_event_horizon + 3), 3)
+            pygame.draw.circle(glow_surf, (255, 255, 255, 90), bh_center, int(current_event_horizon + 8), 5)
+            pygame.draw.circle(glow_surf, (0, 0, 0, 255), bh_center, int(current_event_horizon))
 
             surface.blit(glow_surf, (bh_pos[0] - glow_radius, bh_pos[1] - glow_radius))
 
         # 4. Draw Photon (Player)
-        if self.escape_phase < 3: # Hide player if they flew out completely
+        if not self.consumed and self.escape_phase < 3:
             px_screen = self.player_x - self.camera_x + view_cx
             py_screen = self.player_y - self.camera_y + view_cy
 
@@ -597,8 +629,10 @@ class GamePlay(State):
             pygame.draw.circle(surface, theme["text"], (int(px_screen), int(py_screen)), 5)
 
         # 5. UI Elements
-        if not self.escaping:
-            # Edge indicator
+        if not self.escaping and not self.consumed:
+            px_screen = self.player_x - self.camera_x + view_cx
+            py_screen = self.player_y - self.camera_y + view_cy
+            
             dx = bh_screen_x - px_screen
             dy = bh_screen_y - py_screen
             margin = 2 
@@ -625,7 +659,7 @@ class GamePlay(State):
                                          (int(ind_x - dash_len//2), int(ind_y)), 
                                          (int(ind_x + dash_len//2), int(ind_y)), 4)
 
-            # HUD
+            # HUD Panel
             hud_width, hud_height = 240, 165
             hud_surface = pygame.Surface((hud_width, hud_height), pygame.SRCALPHA)
             hud_surface.fill((0, 0, 0, 160)) 
@@ -649,7 +683,7 @@ class GamePlay(State):
             surface.blit(hud_surface, (20, 20))
 
         # 6. Victory Sequence Text
-        if self.escape_phase == 3:
+        if self.escaping and self.escape_phase == 3:
             fade_surf = pygame.Surface((screen_w, screen_h), pygame.SRCALPHA)
             
             title_font = pygame.font.SysFont("Arial", 60, bold=True)
@@ -675,6 +709,35 @@ class GamePlay(State):
             fade_surf.set_alpha(int(self.fade_alpha))
             surface.blit(fade_surf, (0, 0))
 
+        # 7. Abrupt Game Over Screen (Phase 4: pitch black, zero fade-in, instant display)
+        if self.consumed and self.consume_phase == 4:
+            surface.fill((0, 0, 0))
+            
+            title_font = pygame.font.SysFont("Arial", 60, bold=True)
+            title_text = title_font.render("SINGULARITY COLLAPSE", True, (255, 50, 50))
+            title_rect = title_text.get_rect(center=(center_x, center_y - 80))
+            
+            reason_font = pygame.font.SysFont("Arial", 26)
+            reason_text = reason_font.render("Consumed by the Event Horizon", True, (180, 180, 190))
+            reason_rect = reason_text.get_rect(center=(center_x, center_y - 25))
+            
+            score_font = pygame.font.SysFont("Arial", 40)
+            score_text = score_font.render(f"Final Score: {int(self.score)}", True, theme["selected"])
+            score_rect = score_text.get_rect(center=(center_x, center_y + 35))
+            
+            time_text = score_font.render(f"Time Survived: {self.elapsed_time:.1f}s", True, (220, 220, 230))
+            time_rect = time_text.get_rect(center=(center_x, center_y + 90))
+            
+            inst_font = pygame.font.SysFont("Arial", 24)
+            inst_text = inst_font.render("Press ANY KEY to return to Menu", True, (140, 140, 150))
+            inst_rect = inst_text.get_rect(center=(center_x, center_y + 160))
+            
+            surface.blit(title_text, title_rect)
+            surface.blit(reason_text, reason_rect)
+            surface.blit(score_text, score_rect)
+            surface.blit(time_text, time_rect)
+            surface.blit(inst_text, inst_rect)
+
 
 class GameApp:
     def __init__(self):
@@ -682,7 +745,7 @@ class GameApp:
         self.config = {
             "res_index": 0,         
             "fullscreen": False,
-            "theme": "Dark",
+            "theme": THEME_NAMES[0],
             "speed": 5              
         }
         self.screen = None

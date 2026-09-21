@@ -1,4 +1,2 @@
-# tetris
-The game of tetris
-
-Here i will learn hot to code a bit
+idk what to type
+if u like this shitty game, give a star plz 
